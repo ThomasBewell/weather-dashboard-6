@@ -81,3 +81,79 @@ $(document).ready(function () {
 
                 cityUVIndex.append(uvSpan);
             });
+
+        // get 5-day forecast
+        let forecastQueryUrl = `https://api.openweathermap.org/data/2.5/onecall?lat=${currentLat}&lon=${currentLong}&exclude=current,minutely,hourly&appid=da468ab9a905baca6e0c24b0bea30953`;
+        // ajax for forecast cards
+        $.ajax({
+             url: forecastQueryUrl,
+             method: "GET"
+        })
+            .then(function (response) {
+                $(".card-day").each(function (day) {
+                    day = day + 1;
+                    // date
+                    let cardDateMoment = moment.unix(response.daily[day].dt).format("MM/DD/YYYY");
+                    // icon 
+                    let weatherCardIcon = response.daily[day].weather[0].icon;
+                    let weatherCardIconURL = `https://openweathermap.org/img/wn/${weatherCardIcon}.png`;
+                    let weatherCardIconDesc = response.daily[day].weather[0].description;
+                    // convert temp to fahrenheit
+                    let cardTempF = (response.daily[day].temp.day - 273.15) * 1.80 + 32;
+                    // humidity
+                    let cardHumidity = response.daily[day].humidity;
+                    // fill out cards
+                    $($(this)[0].children[0].children[0]).text(cardDateMoment);
+                    $($(this)[0].children[0].children[1].children[0]).attr("src", weatherCardIconURL).attr("alt", `${weatherCardIconDesc}`).attr("title", `${weatherCardIconDesc}`);
+                    $($(this)[0].children[0].children[2]).text(`Temp: ${cardTempF.toFixed(2)} ℉`);
+                    $($(this)[0].children[0].children[3]).text(`Humidity: ${cardHumidity}%`);
+                });
+            })
+    };
+
+    // store and display past searches
+    function storeSearchTerms(searchedCity) {
+        localStorage.setItem("city" + localStorage.length, searchedCity);
+    }
+    
+    let storedSearchList = "";
+    function displaySearchTerms() {
+        // one button per searched city
+        searchHistory.empty();
+        for (let i = 0; i < localStorage.length; i++) {
+            storedSearchList = localStorage.getItem("city" + i);
+            let searchHistoryBtn = $("<button>").text(storedSearchList).addClass("btn btn-primary button-srch m-2").attr("type", "submit");
+            searchHistory.append(searchHistoryBtn);
+        }
+    }
+
+    // event listeners
+    // search button functionality
+    searchBtn.on("click", function (event) {
+        event.preventDefault();
+        storeSearchTerms(searchTerm[0].value.trim());
+        displaySearchTerms();
+
+        let queryURL = createQueryURL();
+
+        $.ajax({
+            url: queryURL,
+            method: "GET"
+        })
+            .then(updateCurrentWeather);
+    });
+
+    // past search buttons
+    $(document).on("click", ".button-srch", function () {
+
+        let pastCity = $(this).text();
+
+        storeSearchTerms(pastCity);
+
+        $.ajax({
+            url: `https://api.openweathermap.org/data/2.5/weather?appid=da468ab9a905baca6e0c24b0bea30953&q=${pastCity}`,
+            method: "GET"
+        })
+            .then(updateCurrentWeather);
+    });
+});
